@@ -1,5 +1,6 @@
 #pragma once
 #include "AutoTypes.h"
+#include "D3D8PortraitFix.h"
 
 static bool ownLoginFrame;
 static bool ownCashShopFrame;
@@ -34,13 +35,13 @@ bool HookGetModuleFileName(bool bEnable) {
 /// <summary>
 /// Creates a detour for the User32.dll CreateWindowExA function applying the following changes:
 /// 1. Enable the window minimize box
+/// 2. Center on the monitor best suited for the window size (portrait-primary fix, see D3D8PortraitFix)
 /// </summary>
 inline void HookCreateWindowExA(bool bEnable) {
 	static auto create_window_ex_a = decltype(&CreateWindowExA)(GetProcAddress(LoadLibraryA("USER32"), "CreateWindowExA"));
 	static const decltype(&CreateWindowExA) hook = [](DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam) -> HWND {
 		dwStyle |= WS_MINIMIZEBOX; // enable minimize button
-        x = (GetSystemMetrics(SM_CXSCREEN) - nWidth) / 2;
-        y = (GetSystemMetrics(SM_CYSCREEN) - nHeight) / 4;
+		D3D8PortraitFix::PlaceWindowOnBestMonitor(x, y, nWidth, nHeight);
 		return create_window_ex_a(dwExStyle, lpClassName, lpWindowName, dwStyle, x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
 	};
 	Memory::SetHook(bEnable, reinterpret_cast<void**>(&create_window_ex_a), hook);
