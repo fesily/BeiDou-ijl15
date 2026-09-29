@@ -1,6 +1,7 @@
 #pragma once
 #include "AutoTypes.h"
 #include "D3D8PortraitFix.h"
+#include <unordered_map>
 
 static bool ownLoginFrame;
 static bool ownCashShopFrame;
@@ -194,11 +195,7 @@ bool HookCWvsApp__InitializeResMan(bool bEnable)	//resman hook that does nothing
 	return Memory::SetHook(bEnable, reinterpret_cast<void**>(&_CWvsApp__InitializeResMan), _CWvsApp__InitializeResMan_Hook);
 }
 //#pragma optimize("", on)
-struct KeyValuePair {
-	int key;
-	std::string value;
-};
-KeyValuePair newKeyValuePairs[] = {
+std::unordered_map<int, std::string> newKeyValuePairs = {
     {11, "设置"},
     {12, "新手"},
     {13, "战士"},
@@ -2155,11 +2152,9 @@ bool Hook_StringPool__GetString(bool bEnable)	//hook stringpool modification //t
 			default:
 				if (Client::SwitchChinese)
 				{
-					for (const auto& pair : newKeyValuePairs) {
-						if (nIdx == pair.key) {
-							*ret = pair.value.c_str();
-							break;
-						}
+                    auto iter = newKeyValuePairs.find(nIdx);
+                    if (iter != newKeyValuePairs.end()) {
+                        *ret = iter->second.c_str();
 					}
 				}
 				break;
