@@ -148,8 +148,10 @@ void GameSize(int& w, int& h) {
 // Portrait-first policy: windowed D3D8 device creation works fine on a
 // portrait adapter (verified with a standalone 32-bit d3d8 test), so the
 // game always stays on adapter 0. Only the mode enumeration needs help:
-// a portrait adapter reports portrait modes only, which hides the
-// landscape game resolution from Gr2D's "find proper screen mode" scan.
+// Gr2D's "find proper screen mode" scan fails whenever the game
+// resolution is absent from the adapter's mode list (portrait adapters
+// report portrait modes only; some virtual adapters skip modes like
+// 1280x720), so the missing sizes are appended transparently.
 void ChooseAdapter(void* d3d) {
     int wantW, wantH;
     GameSize(wantW, wantH);
@@ -166,7 +168,8 @@ void ChooseAdapter(void* d3d) {
         int w = mi.rcMonitor.right - mi.rcMonitor.left;
         int h = mi.rcMonitor.bottom - mi.rcMonitor.top;
         if (i == 0) {
-            // Spoof landscape modes when the primary adapter is portrait.
+            // Spoof when the primary adapter is portrait: its list hides
+            // every landscape size.
             g_spoofModes = (h > w);
         } else if (w >= h && w >= wantW && h >= wantH) {
             // Remember a landscape adapter as a CreateDevice fallback.
@@ -183,6 +186,18 @@ void ChooseAdapter(void* d3d) {
     if (g_displayMode.Format == 0)
         g_displayMode.Format = kFormatX8R8G8B8;
     g_realModeCount = ((PfnGetAdapterModeCount)g_vtableOrig[VT_GetAdapterModeCount])(d3d, g_adapter);
+    if (!g_spoofModes) {
+        // Spoof whenever the game resolution is missing from the real
+        // list (e.g. virtual adapters without 1280x720).
+        bool found = false;
+        for (UINT i = 0; i < g_realModeCount && !found; ++i) {
+            D3D8Mode m = { 0, 0, 0, 0 };
+            if (((PfnEnumAdapterModes)g_vtableOrig[VT_EnumAdapterModes])(d3d, g_adapter, i, &m) == S_OK &&
+                (int)m.Width == wantW && (int)m.Height == wantH)
+                found = true;
+        }
+        g_spoofModes = !found;
+    }
 }
 
 UINT MapAdapter(UINT adapter) {

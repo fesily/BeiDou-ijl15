@@ -16,8 +16,9 @@
 //  1. GetProcAddress is hooked: resolving "Direct3DCreate8" returns our
 //     factory instead of the d3d8.dll one.
 //  2. The factory creates the real IDirect3D8 object and patches its
-//     vtable. EnumAdapterModes additionally reports landscape modes on
-//     a portrait adapter 0, so Gr2D finds the game resolution.
+//     vtable. EnumAdapterModes additionally reports the game resolution
+//     (plus common sizes, at 60 Hz and the display rate) whenever it is
+//     missing from the real list (portrait adapters; sparse virtual ones).
 //  3. If CreateDevice on adapter 0 ever fails, it is retried once on a
 //     landscape adapter when one exists.
 //  4. CreateWindowExA placement keeps the historical coordinates
